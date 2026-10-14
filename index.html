@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <title>PUMPAKTAB App</title>
+    
+    <link rel="manifest" href="./manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.error('Gagal daftar SW', err));
+            });
+        }
+    </script>
+
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS, FontAwesome, SweetAlert2, HTML2PDF -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        'glass-bg': 'rgba(15, 23, 42, 0.4)',
+                        'glass-border': 'rgba(147, 197, 253, 0.2)',
+                    },
+                    boxShadow: {
+                        'glass': '0 10px 40px rgba(0, 0, 0, 0.5), inset 0 2px 20px rgba(255, 255, 255, 0.05)',
+                        'glow': '0 0 20px rgba(56, 189, 248, 0.4), inset 0 0 15px rgba(168, 85, 247, 0.2)',
+                    },
+                    animation: {
+                        'float': 'floatAnim 6s ease-in-out infinite',
+                        'pulse-glow': 'pulseGlowAnim 3s infinite alternate',
+                        'pop-in': 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                        'glass-blur': 'glassBlurReveal 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards'
+                    },
+                    keyframes: {
+                        floatAnim: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } },
+                        pulseGlowAnim: { '0%': { filter: 'drop-shadow(0 0 10px rgba(56, 189, 248, 0.5))' }, '100%': { filter: 'drop-shadow(0 0 25px rgba(168, 85, 247, 0.9))' } },
+                        popIn: { '0%': { transform: 'scale(0.8)', opacity: '0' }, '100%': { transform: 'scale(1)', opacity: '1'} },
+                        fadeInUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        glassBlurReveal: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)', filter: 'blur(15px)' },
+                            '100%': { opacity: '1', transform: 'scale(1)', filter: 'blur(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css?family=Amiri:wght@400;700&display=swap');
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; 
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            transition: background-image 0.5s ease-in-out, background-color 0.5s ease;
+        }
+
+        .glass-card, .glass-panel {
+            background: rgba(255, 255, 255, 0.6) !important;
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.8) !important;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08), inset 0 2px 20px rgba(255, 255, 255, 0.5) !important;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .glass-card, .dark .glass-panel {
+            background: rgba(30, 41, 59, 0.6) !important;
+            border: 1px solid rgba(147, 197, 253, 0.15) !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 2px 20px rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .ripple-btn { position: relative; overflow: hidden; transition: all 0.3s; }
+        .ripple-effect {
+            position: absolute; border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.0) 100%);
+            transform: scale(0); animation: rippleAnim 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+            pointer-events: none; z-index: 10;
+        }
+        .dark .ripple-effect {
+            background: radial-gradient(circle, rgba(147,197,253,0.8) 0%, rgba(168,85,247,0.6) 100%);
+            box-shadow: 0 0 20px rgba(147,197,253,0.8);
+        }
+        @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
+
+        /* F4 PAPER ALWAYS WHITE/BLACK - NO DARK MODE HERE */
+        .f4-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 1rem; }
+        .f4-paper {
+            min-width: 1100px;
+            background-color: white !important;
+            padding: 24px;
+            box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.2);
+            color: black !important;
+            font-size: 13px;
+        }
+        .table-blangko { border-collapse: collapse; width: 100%; font-size: 12px; }
+        .table-blangko th, .table-blangko td { border: 2px solid #000; padding: 4px; text-align: center; }
+        .table-blangko th { font-weight: bold; background-color: white; }
+        .table-footer { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 10px;}
+        .table-footer td { border: 2px solid #000; padding: 4px 8px; }
+
+        @media print {
+            @page { size: 330mm 215mm landscape; margin: 10mm; }
+            body * { visibility: hidden; }
+            #printable-area, #printable-area * { visibility: visible; }
+            #printable-area { position: absolute; left: 0; top: 0; width: 100%; color: black !important; }
+            .no-print { display: none !important; }
+        }
+
+        ::-webkit-scrollbar { width: 0px; height: 0px; background: transparent; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .arabic-text { font-family: 'Amiri', serif; font-size: 18px; font-weight: bold; direction: rtl; line-height: 1.2; }
+        .page-transition { animation: glassBlurReveal 0.5s ease-out forwards; }
+        .gooey-filter { filter: url('#goo'); }
+
+        .safe-bottom { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+        
+        .table-sticky-left {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="antialiased h-screen w-screen overflow-hidden overscroll-none">
+    
+    <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
+        <defs>
+            <filter id="goo">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+                <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+            </filter>
+        </defs>
+    </svg>
+
+    <div id="root" class="h-full w-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+        const API_URL = "https://script.google.com/macros/s/AKfycbwnbWaIrUONYXM6RPzGpOSH2HoR4aJx21oBWBXLgRs_3oUO5TNXHGlwp2Yuc_dFOC-eNw/exec";
+
+        const apiPost = async (action, payload) => {
+            if (!API_URL) throw new Error("API URL missing");
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action, payload })
+            });
+            const text = await res.text();
+            const data = JSON.parse(text);
+            if (!data.success) throw new Error(data.error);
+            return data.data;
+        };
+
+        const CURRICULUM = {
+            '1': ['Safinatun Najah', "Aqidatul 'Awam", 'Hidayatus Sibyan', 'Jurumiyah Jawa', 'Pegon'],
+            '2': ['Tanwirul Hija', 'Fathul Mubin Juz 1', 'Taisirul Kholaq', 'Tuhfatus Tsaniyah', 'Tasrif Istilahi'],
+            '3': ['Sullamut Taufiq', 'Khoridatul Bahiyyah', 'At-Tahliyah', 'Tuhfatus Tsaniyah', 'Tasrif Lughowi'],
+            '4I': ['Fathul Qorib', 'Pegon/Sanusiyyah', "Ta'limul Muta'allim", 'Matan Jurumiyah', 'Tasrif Istilahi'],
+            '4N': ['Fathul Qorib', "Nurul 'Uyun/Sanusiyyah", "Ta'limul Muta'allim", 'Taqrirat Jurumiyah', 'Qowaid Shorfiyah Juz 1'],
+            '5I': ['Fathul Qorib', 'Kifayatul Awam', "Al-I'lal", 'Fushul Al Fikriyah', 'Tasrif Lughowi'],
+            '5N': ['Fathul Qorib', 'Kifayatul Awam', "Al-I'lal", 'Fushul Al Fikriyah', 'Qowaid Shorfiyah Juz 2'],
+            '6': ['Fathul Qorib', "Al-Arba'in An-Nawawi", "Nashoihul 'Ibad", "Taqrirat Al-'Imriti", 'Ibanah wal Ifadhoh']
+        };
+
+        const MEMORIZATION_LIMITS = {
+            '1': {
+                '1': { nadhom: 'JURUMIYYAH JAWA', r: '1-76', m: '77-86', j: '87-100' },
+                '2': { nadhom: 'JURUMIYYAH JAWA', r: '87-146', m: '147-165', j: '166-171'}
+            },
+            '2': {
+                '1': { nadhom: 'TASRIF ISTILAHI', r: 'أبرأ - تواعد', m: 'ناساً - أجار', j: 'فعل - ليعض' },
+                '2': { nadhom: 'TASRIF ISTILAHI', r: 'افعل - اطمأن', m: 'تفعل - احرنجم', j: 'تفعل - تكلّم' }
+            },
+            '3': {
+                '1': { nadhom: 'TASRIF LUGHOWI', r: 'ليقعن - ليصونن', m: 'ليعد - ليولد', j: 'فعل - يرضى' },
+                '2': { nadhom: 'TASRIF LUGHOWI', r: 'وقور - مجنون', m: 'فاء - خان', j: 'يفعل - مرمى' }
+            },
+            '4I': {
+                '1': { nadhom: 'TASRIF ISTILAHI', r: 'أبرأ - تواعد', m: 'ناساً - أجار', j: 'فعل - ليعض' },
+                '2': { nadhom: 'TASRIF ISTILAHI', r: 'افعل - اطمأن', m: 'تفعل - احرنجم', j: 'تفعل - تكلّم' }
+            },
+            '4N': {
+                '1': { nadhom: 'QOIDAH SHORFIYYAH JUZ 1', r: '1-35', m: '36-43', j: '44-51'},
+                '2': { nadhom: 'QOIDAH SHORFIYYAH JUZ 1', r: '45-61', m: '62-69', j: '70-80' }
+            },
+            '5I': {
+                '1': { nadhom: 'TASRIF LUGHOWI', r: 'ليقعن - ليصونن', m: 'ليعد - ليولد', j: 'فعل - يرضى' },
+                '2': { nadhom: 'TASRIF LUGHOWI', r: 'وقور - مجنون', m: 'فاء - خان', j: 'يفعل - مرمى' }
+            },
+            '5N': {
+                '1': { nadhom: 'QOIDAH SHORFIYYAH JUZ 2', r: '1-42', m: '43-55', j: '56-62' },
+                '2': { nadhom: 'QOIDAH SHORFIYYAH JUZ 2', r: '57-90', m: '91-100', j: '101-107'}
+            },
+            '6': {
+                '1': { nadhom: 'AL-IMRITHY', r: '1-104', m: '105-119', j: '120-132' },
+                '2': { nadhom: 'AL-IMRITHY', r: '121-232', m: '234-247', j: '248-254'}
+            }
+        };
+
+        const ROLES = ['Admin', 'Penyimak', 'Korektor', 'Panitia', 'Wali Kelas'];
+        const DEFAULT_MENU_ACCESS = {
+            'Admin': ['dash', 'nilai', 'data', 'feed', 'set'],
+            'Wali Kelas': ['dash', 'data', 'feed'],
+            'Penyimak': ['dash', 'nilai', 'data', 'feed'],
+            'Korektor': ['dash', 'nilai', 'data', 'feed'],
+            'Panitia': ['dash', 'nilai', 'data', 'feed', 'set']
+        };
+
+        const handleRipple = (e) => {
+            const btn = e.currentTarget;
+            const circle = document.createElement("span");
+            const diameter = Math.max(btn.clientWidth, btn.clientHeight);
+            const radius = diameter / 2;
+            const rect = btn.getBoundingClientRect();
+            const x = (e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY) - rect.top;
+            circle.style.width = circle.style.height = `${diameter}px`;
+            circle.style.left = `${x - radius}px`;
+            circle.style.top = `${y - radius}px`;
+            circle.classList.add("ripple-effect");
+            const existing = btn.querySelector('.ripple-effect');
+            if(existing) existing.remove();
+            btn.appendChild(circle);
+            setTimeout(() => { if(circle.parentNode) circle.remove() }, 600);
+        };
+
+        const getBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        const parseRange = (rangeStr) => {
+            if (!rangeStr || typeof rangeStr !== 'string') return { min: -1, max: -1 };
+            const parts = rangeStr.split('-');
+            if (parts.length !== 2) return { min: -1, max: -1 };
+            return { min: parseInt(parts[0], 10), max: parseInt(parts[1], 10) };
+        };
+
+        const calculateAlBayan = (score, limits) => {
+            if (score === "" || isNaN(score)) return null;
+            const numScore = parseInt(score, 10);
+            const rRange = parseRange(limits.r), mRange = parseRange(limits.m), jRange = parseRange(limits.j);
+            if (numScore >= jRange.min) return 'J';
+            if (numScore >= mRange.min && numScore <= mRange.max) return 'M';
+            if (numScore >= rRange.min && numScore <= rRange.max) return 'R';
+            if (numScore > 0) return 'R';
+            return null;
+        };
+
+        const LoadingOverlay = ({ message, logo }) => {
+            const [imgError, setImgError] = useState(false);
+            return (
+                <div className="fixed inset-0 bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl z-[999] flex flex-col items-center justify-center transition-all duration-500">
+                    <div className="relative animate-bounce mb-8">
+                        <div className="w-24 h-24 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white relative z-10 border border-white/50 dark:border-white/20 shadow-[0_0_30px_rgba(56,189,248,0.5)] overflow-hidden p-1">
+                            {logo && !imgError ? (
+                                <img src={logo} className="w-full h-full object-cover rounded-2xl" onError={() => setImgError(true)} />
+                            ) : (
+                                <i className="fas fa-graduation-cap text-4xl"></i>
+                            )}
+                        </div>
+                        <div className="absolute -inset-4 border-[3px] border-sky-400/50 rounded-full border-t-transparent animate-spin-slow"></div>
+                    </div>
+                    <p className="font-black tracking-widest text-lg animate-pulse text-center px-4 text-sky-700 dark:text-sky-300 drop-shadow-md">{message}</p>
+                </div>
+            );
+        };
+
+        const LoginScreen = ({ onLogin, appLogo, usersData, bgImage }) => {
+            const [role, setRole] = useState(ROLES[0]);
+            const [password, setPassword] = useState("");
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState(false);
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                const validPassword = usersData[role] || '123';
+                if (password !== validPassword) {
+                    setError(true); setTimeout(() => setError(false), 2000); return;
+                }
+                setIsLoading(true);
+                setTimeout(() => { setIsLoading(false); onLogin({ role, name: role, photo: 'https://i.pravatar.cc/150?img=11' }); }, 800);
+            };
+
+            return (
+                <div className="h-full w-full flex items-center justify-center relative p-4" style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover' }}>
+                    <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-md"></div>
+                    <div className="glass-card p-8 w-full max-w-sm relative z-10 page-transition text-center border-t border-sky-500/30">
+                        <div className="mb-8 relative animate-float inline-block">
+                            <div className="absolute inset-0 bg-sky-500 rounded-full blur-2xl opacity-40 dark:opacity-50 animate-pulse-glow"></div>
+                            <div className="bg-gradient-to-tr from-sky-400 to-indigo-500 dark:from-sky-500 dark:to-indigo-600 p-5 rounded-3xl relative z-10 text-white border border-white/50 dark:border-white/20 shadow-[0_0_20px_rgba(56,189,248,0.3)] dark:shadow-[0_0_20px_rgba(56,189,248,0.5)] flex items-center justify-center w-24 h-24 mx-auto overflow-hidden">
+                                {appLogo ? <img src={appLogo} className="w-full h-full object-cover" /> : <i className="fas fa-graduation-cap text-4xl"></i>}
+                            </div>
+                        </div>
+                        
+                        <h1 className="text-3xl font-extrabold text-slate-800 dark:text-white mb-1 tracking-tight animate-pulse bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-purple-500">PUMPAKTAB</h1>
+                        <p className="text-sm text-sky-700 dark:text-sky-300 mb-8 font-bold">Halo Kakak Baik</p>
+                        
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <div className="text-left space-y-1.5">
+                                <label className="block text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider ml-1">Role Akses</label>
+                                <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full bg-white/60 dark:bg-slate-800/70 border border-slate-300/50 dark:border-slate-600 rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:border-sky-500 transition-all font-bold text-center appearance-none">
+                                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                            </div>
+                            <div className="text-left space-y-1.5">
+                                <label className="block text-[10px] font-bold text-sky-700 dark:text-sky-400 uppercase tracking-wider ml-1">Password</label>
+                                <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full bg-white/60 dark:bg-slate-800/70 border ${error ? 'border-rose-500 ring-2 ring-rose-500/50' : 'border-slate-300/50 dark:border-slate-600'} rounded-xl px-4 py-3 text-slate-800 dark:text-white outline-none focus:border-sky-500 transition-all font-bold text-center tracking-[0.2em] placeholder-slate-400`} placeholder="Masukkan Password" />
+                                {error && <p className="text-rose-500 dark:text-rose-400 text-xs font-bold mt-1 ml-1 animate-pulse text-center">Password Salah!</p>}
+                            </div>
+                            <button type="submit" disabled={isLoading} onPointerDown={handleRipple} className="ripple-btn w-full mt-6 bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-black rounded-xl px-4 py-3.5 shadow-[0_0_20px_rgba(56,189,248,0.4)] active:scale-95 transition-all">
+                                {isLoading ? <i className="fas fa-spinner fa-spin"></i> : 'MASUK APLIKASI'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const Header = ({ user, setUser, appLogo, adminProfile, fetchData, isLoadingData }) => {
+            return (
+                <div className="glass-panel p-4 flex justify-between items-center relative overflow-hidden border-t border-sky-400/30 no-print mb-6 shrink-0 mt-4 mx-4">
+                    <div className="flex items-center gap-3 relative z-10">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-sky-400 to-indigo-500 p-0.5 shadow-[0_0_10px_rgba(14,165,233,0.5)]">
+                            {appLogo ? <img src={appLogo} className="w-full h-full object-cover rounded-[10px]" /> : <div className="w-full h-full rounded-[10px] bg-slate-800 flex items-center justify-center text-white"><i className="fas fa-graduation-cap"></i></div>}
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-lg leading-tight tracking-tight animate-pulse text-slate-800 dark:text-white">PUMPAKTAB</h2>
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-400 text-[10px] font-black rounded-full border border-sky-300 dark:border-sky-500/50 animate-float uppercase">
+                                {user.role}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="flex gap-2 relative z-10">
+                        <button onClick={() => fetchData(true)} disabled={isLoadingData} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-sky-600 dark:text-sky-400 border border-slate-300 dark:border-slate-700 active:scale-95 transition-all">
+                            <i className={`fas fa-sync-alt ${isLoadingData ? 'fa-spin' : ''}`}></i>
+                        </button>
+                        <button onClick={() => setUser(null)} className="w-8 h-8 rounded-full bg-rose-100 dark:bg-red-900/30 flex items-center justify-center text-rose-600 dark:text-red-400 border border-rose-300 dark:border-red-800/50 active:scale-95 transition-all">
+                            <i className="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const Dashboard = ({ students, examData }) => {
+            const [examType, setExamType] = useState('utama_muhafadzoh');
+            const [gender, setGender] = useState('Semua (Pa/Pi)');
+            const [semester, setSemester] = useState('1');
+            const [kelas, setKelas] = useState('Semua Kelas');
+            const [isRadarOpen, setIsRadarOpen] = useState(false);
+
+            const allClasses = useMemo(() => ['Semua Kelas', ...new Set(students.map(s => s.classId))], [students]);
+
+            const stats = useMemo(() => {
+                let filtered = students;
+                if (gender === 'Putra') filtered = filtered.filter(s => s.gender === 'Putra');
+                else if (gender === 'Putri') filtered = filtered.filter(s => s.gender === 'Putri');
+
+                const typeKey = examType.includes('pra') ? 'pra' : 'utama';
+                const isMuhafadzoh = examType.includes('muhafadzoh');
+
+                // Leaderboard Calculation
+                const classStats = {};
+                filtered.forEach(s => {
+                    if(!classStats[s.classId]) classStats[s.classId] = { points: 0, total: 0 };
+                    classStats[s.classId].total += 1;
+                    let pts = 0;
+                    if(isMuhafadzoh) {
+                        const b = examData[typeKey]?.scores[s.id]?.bayan;
+                        pts = b === 'J' ? 3 : b === 'M' ? 2 : b === 'R' ? 1 : 0;
+                    } else {
+                        const curr = CURRICULUM[s.type] || [], checks = examData[typeKey]?.checks[s.id] || {};
+                        let chkCount = 0; curr.forEach(sub => { if(checks[sub]) chkCount++; });
+                        pts = Object.keys(checks).length === 0 ? 0 : (curr.length > 0 && chkCount === curr.length ? 3 : 1);
+                    }
+                    classStats[s.classId].points += pts;
+                });
+
+                let leaderboard = Object.keys(classStats).map(c => ({ name: c, avg: classStats[c].total > 0 ? (classStats[c].points / classStats[c].total) : 0, pts: classStats[c].points })).sort((a,b) => b.avg - a.avg);
+                let bestClass = leaderboard[0] || { name: '-', pts: 0 }, secondBest = leaderboard[1] || { name: '-', pts: 0 }, worstClass = leaderboard[leaderboard.length-1] || { name: '-', pts: 0 };
+
+                if (kelas !== 'Semua Kelas') filtered = filtered.filter(s => s.classId === kelas);
+
+                let r=0, m=0, j=0, g=0, tam=0, naqish=0, ghoib=0, problematic = [];
+
+                filtered.forEach((s) => {
+                    if (isMuhafadzoh) {
+                        const data = examData[typeKey]?.scores[s.id];
+                        if (data && data.bayan) {
+                            if (data.bayan === 'R') { r++; problematic.push({...s, status: "Rodi'"}); }
+                            else if (data.bayan === 'M') m++;
+                            else if (data.bayan === 'J') j++;
+                            else if (data.bayan === 'G') { g++; problematic.push({...s, status: "Ghoib"}); }
+                        } else { ghoib++; problematic.push({...s, status: "Ghoib"}); }
+                    } else {
+                        const curriculum = CURRICULUM[s.type] || [];
+                        const checks = examData[typeKey]?.checks[s.id] || {};
+                        if (Object.keys(checks).length === 0) {
+                            ghoib++; problematic.push({...s, status: "Ghoib"});
+                        } else {
+                            let currentChecks = 0;
+                            curriculum.forEach(sub => { if(checks[sub]) currentChecks++; });
+                            if(curriculum.length > 0 && currentChecks === curriculum.length) tam++;
+                            else { naqish++; problematic.push({...s, status: "Naqish"}); }
+                        }
+                    }
+                });
+
+                const totalGhoib = isMuhafadzoh ? (ghoib + g) : ghoib;
+                const total = filtered.length;
+                const successRate = total > 0 ? Math.round(((isMuhafadzoh ? j+m : tam) / total) * 100) : 0;
+                const getPct = (val) => total > 0 ? Math.round((val/total)*100) : 0;
+
+                return { total, r, m, j, g, tam, naqish, ghoib: totalGhoib, isMuhafadzoh, successRate, problematic, bestClass, secondBest, worstClass, getPct };
+            }, [gender, kelas, examType, examData, students, semester]);
+
+            const copyRadar = () => {
+                let text = `*⚠️ RADAR EVALUASI SANTRI*\nFilter: ${kelas} | ${gender}\nFase: ${examType.replace('_', ' ').toUpperCase()}\n\n`;
+                stats.problematic.forEach((s, i) => { text += `${i+1}. ${s.name} (${s.classId}) - *${s.status}*\n`; });
+                navigator.clipboard.writeText(text);
+                Swal.fire({ title: 'Disalin!', text: 'Data santri bermasalah siap ditempel ke WA.', icon: 'success', background: '#1e293b', color: '#fff', timer: 2000, showConfirmButton: false });
+            };
+
+            return (
+                <div className="space-y-4 page-transition pb-28 px-4 overflow-y-auto h-full hide-scrollbar">
+                    <div className="glass-panel p-5 border-t border-sky-500/30 relative overflow-hidden">
+                        <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-sky-400/20 dark:bg-sky-500/20 rounded-full blur-3xl z-0"></div>
+                        <div className="flex items-center gap-2 mb-4 relative z-10 border-b border-slate-300/50 dark:border-white/10 pb-3">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-500 flex items-center justify-center shadow-[0_0_10px_rgba(14,165,233,0.5)]">
+                                <i className="fas fa-chart-pie text-white"></i>
+                            </div>
+                            <h3 className="font-bold text-lg text-slate-800 dark:text-white tracking-tight">Statistik & Analitik</h3>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 mb-4 relative z-10">
+                            <select value={examType} onChange={e=>setExamType(e.target.value)} className="col-span-2 bg-white/70 dark:bg-slate-800/80 border border-slate-300/50 dark:border-slate-600 rounded-lg p-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none shadow-sm text-center">
+                                <option value="pra_muhafadzoh">Pra Muhafadzoh</option>
+                                <option value="pra_taftisy">Pra Taftisy</option>
+                                <option value="utama_muhafadzoh">Muhafadzoh Utama</option>
+                                <option value="utama_taftisy">Taftisy Utama</option>
+                            </select>
+                            <select value={gender} onChange={e=>setGender(e.target.value)} className="bg-white/70 dark:bg-slate-800/80 border border-slate-300/50 dark:border-slate-600 rounded-lg p-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none shadow-sm text-center">
+                                <option value="Semua (Pa/Pi)">Semua (Pa/Pi)</option><option value="Putra">Putra</option><option value="Putri">Putri</option>
+                            </select>
+                            <select value={semester} onChange={e=>setSemester(e.target.value)} className="bg-white/70 dark:bg-slate-800/80 border border-slate-300/50 dark:border-slate-600 rounded-lg p-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none shadow-sm text-center">
+                                <option value="1">Semester 1</option><option value="2">Semester 2</option>
+                            </select>
+                            <select value={kelas} onChange={e=>setKelas(e.target.value)} className="col-span-2 bg-white/70 dark:bg-slate-800/80 border border-slate-300/50 dark:border-slate-600 rounded-lg p-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none shadow-sm text-center">
+                                {allClasses.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="flex justify-center mb-6 relative z-10 mt-6">
+                            <svg className="w-32 h-32 transform -rotate-90">
+                                <circle cx="64" cy="64" r="50" strokeWidth="12" fill="none" className="stroke-slate-200 dark:stroke-[#1e293b]" />
+                                <circle cx="64" cy="64" r="50" strokeWidth="12" fill="none" strokeDasharray="314" strokeDashoffset={314 - (stats.successRate/100)*314} className="stroke-sky-500 drop-shadow-[0_0_8px_rgba(14,165,233,0.8)] transition-all duration-1000 ease-out" />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-2xl font-black text-slate-800 dark:text-white">{stats.successRate}%</span>
+                                <span className="text-[9px] text-sky-600 dark:text-sky-400 uppercase tracking-widest font-bold">Sukses</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 relative z-10 mb-2">
+                            {stats.isMuhafadzoh ? (
+                                <>
+                                    <div className="flex justify-between text-xs font-bold"><span className="text-emerald-600 dark:text-emerald-400">Jayyid ({stats.j} Siswa)</span><span className="text-slate-700 dark:text-slate-300">{stats.getPct(stats.j)}%</span></div>
+                                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 shadow-[0_0_10px_#34d399] transition-all duration-1000" style={{width: `${stats.getPct(stats.j)}%`}}></div></div>
+                                    
+                                    <div className="flex justify-between text-xs font-bold"><span className="text-sky-600 dark:text-sky-400">Mutawasit ({stats.m} Siswa)</span><span className="text-slate-700 dark:text-slate-300">{stats.getPct(stats.m)}%</span></div>
+                                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-sky-500 shadow-[0_0_10px_#38bdf8] transition-all duration-1000" style={{width: `${stats.getPct(stats.m)}%`}}></div></div>
+
+                                    <div className="flex justify-between text-xs font-bold"><span className="text-purple-600 dark:text-purple-400">Rodi' ({stats.r} Siswa)</span><span className="text-slate-700 dark:text-slate-300">{stats.getPct(stats.r)}%</span></div>
+                                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-purple-500 shadow-[0_0_10px_#c084fc] transition-all duration-1000" style={{width: `${stats.getPct(stats.r)}%`}}></div></div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex justify-between text-xs font-bold"><span className="text-emerald-600 dark:text-emerald-400">Tam ({stats.tam} Siswa)</span><span className="text-slate-700 dark:text-slate-300">{stats.getPct(stats.tam)}%</span></div>
+                                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-emerald-500 shadow-[0_0_10px_#34d399] transition-all duration-1000" style={{width: `${stats.getPct(stats.tam)}%`}}></div></div>
+                                    
+                                    <div className="flex justify-between text-xs font-bold"><span className="text-amber-600 dark:text-amber-400">Naqish ({stats.naqish} Siswa)</span><span className="text-slate-700 dark:text-slate-300">{stats.getPct(stats.naqish)}%</span></div>
+                                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-amber-500 shadow-[0_0_10px_#fbbf24] transition-all duration-1000" style={{width: `${stats.getPct(stats.naqish)}%`}}></div></div>
+                                </>
+                            )}
+                            <div className="flex justify-between text-xs font-bold"><span className="text-rose-600 dark:text-red-400">Ghoib ({stats.ghoib} Siswa)</span><span className="text-slate-700 dark:text-slate-300">{stats.getPct(stats.ghoib)}%</span></div>
+                            <div className="w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-rose-500 shadow-[0_0_10px_#ef4444] transition-all duration-1000" style={{width: `${stats.getPct(stats.ghoib)}%`}}></div></div>
+                        </div>
+                    </div>
+
+                    <div className="glass-panel p-5 border-t border-amber-500/30">
+                        <h3 className="font-bold text-slate-800 dark:text-white mb-4 text-center flex justify-center items-center"><i className="fas fa-trophy text-amber-500 mr-2"></i> Peringkat Kelas</h3>
+                        <div className="flex justify-between items-end px-4">
+                            <div className="flex flex-col items-center w-1/3">
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-300 mb-1">2nd ({stats.secondBest.name})</span>
+                                <div className="w-full h-16 bg-slate-200 dark:bg-slate-700/50 rounded-t-lg border-t-2 border-slate-400 flex items-center justify-center font-bold text-slate-600 dark:text-slate-400">{stats.secondBest.pts}pt</div>
+                            </div>
+                            <div className="flex flex-col items-center w-1/3 z-10">
+                                <span className="text-[10px] font-black text-amber-500 dark:text-amber-400 mb-1 drop-shadow-md">1st ({stats.bestClass.name})</span>
+                                <div className="w-full h-24 bg-gradient-to-t from-amber-100 to-amber-300 dark:from-amber-600/20 dark:to-amber-400/20 rounded-t-lg border-t-2 border-amber-500 dark:border-amber-400 flex items-center justify-center font-black text-amber-700 dark:text-amber-400 shadow-[0_-5px_15px_rgba(251,191,36,0.3)]">{stats.bestClass.pts}pt</div>
+                            </div>
+                            <div className="flex flex-col items-center w-1/3">
+                                <span className="text-[10px] font-bold text-rose-600 dark:text-orange-700 mb-1">Low ({stats.worstClass.name})</span>
+                                <div className="w-full h-10 bg-rose-100 dark:bg-red-900/20 rounded-t-lg border-t-2 border-rose-500 dark:border-red-700 flex items-center justify-center font-bold text-rose-700">{stats.worstClass.pts}pt</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="glass-panel overflow-hidden transition-all border border-rose-300/50 dark:border-red-500/50">
+                        <button onPointerDown={handleRipple} onClick={() => setIsRadarOpen(!isRadarOpen)} className="ripple-btn w-full p-4 flex items-center justify-between bg-rose-50/50 dark:bg-red-950/30">
+                            <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 rounded-full bg-rose-500 animate-pulse shadow-[0_0_10px_#ef4444]"></div>
+                                <div className="text-left">
+                                    <h4 className="font-bold text-rose-700 dark:text-red-400 text-sm">Radar Santri Bermasalah</h4>
+                                    <p className="text-[10px] text-rose-500/80 dark:text-red-300/70 font-semibold">Daftar santri Rodi' / Naqish / Ghoib</p>
+                                </div>
+                            </div>
+                            <i className={`fas fa-chevron-right text-rose-500 transition-transform ${isRadarOpen ? 'rotate-90' : ''}`}></i>
+                        </button>
+                        {isRadarOpen && (
+                            <div className="p-4 border-t border-rose-200/50 dark:border-rose-800/30 bg-white/40 dark:bg-slate-900/40">
+                                {stats.problematic.length === 0 ? <p className="text-center text-xs font-bold text-emerald-600 py-2">✨ Aman terkendali!</p> : (
+                                    <>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto mb-3 hide-scrollbar">
+                                            {stats.problematic.map((s, i) => (
+                                                <div key={i} className="flex justify-between items-center bg-white/70 dark:bg-slate-800/70 p-2 rounded-xl shadow-sm border border-rose-100 dark:border-rose-900/30">
+                                                    <div className="flex flex-col"><span className="font-bold text-[11px] text-slate-800 dark:text-white uppercase truncate max-w-[150px]">{s.name}</span><span className="text-[9px] font-bold text-slate-500">{s.classId}</span></div>
+                                                    <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/50 px-2 py-1 rounded-md">{s.status}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onPointerDown={handleRipple} onClick={copyRadar} className="ripple-btn w-full bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.4)]"><i className="fas fa-copy"></i> Salin Laporan ke WA</button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const Penilaian = ({ students, examData, setExamData, blangkoLogo }) => {
+            const tabs = ['Pra Muhafadzoh', 'Pra Taftisy', 'Muhafadzoh Utama', 'Taftisy Utama'];
+            const [activeSubTab, setActiveSubTab] = useState(tabs[2]);
+            const [gender, setGender] = useState('Putra');
+            const [semester, setSemester] = useState('1');
+            const [selectedClass, setSelectedClass] = useState("");
+            const [regu, setRegu] = useState('Regu 1');
+            const [isSaving, setIsSaving] = useState(false);
+            
+            const [activePopupIdx, setActivePopupIdx] = useState(null);
+            const [popupScore, setPopupScore] = useState("");
+
+            const isUtama = activeSubTab.includes('Utama');
+            const isTaftisy = activeSubTab.includes('Taftisy');
+            const phaseKey = isUtama ? 'utama' : 'pra';
+
+            const genderStudents = useMemo(() => students.filter(s => s.gender === gender), [students, gender]);
+            const availableClasses = useMemo(() => [...new Set(genderStudents.map(s => s.classId))], [genderStudents]);
+
+            useEffect(() => { if (!isUtama && !availableClasses.includes(selectedClass)) setSelectedClass(availableClasses[0] || ""); }, [isUtama, availableClasses, selectedClass]);
+
+            const studentLimit = gender === 'Putra' ? 12 : 15;
+            const totalRegu = Math.ceil(genderStudents.length / studentLimit) || 1;
+            const availableRegus = useMemo(() => Array.from({length: totalRegu}, (_, i) => `Regu ${i + 1}`), [totalRegu]);
+            useEffect(() => { if (isUtama && !availableRegus.includes(regu)) setRegu(availableRegus[0] || 'Regu 1'); }, [isUtama, availableRegus, regu]);
+
+            let displayStudents = [];
+            if (isUtama) {
+                const reguIndex = parseInt(regu.replace('Regu ', "")) - 1;
+                displayStudents = genderStudents.slice(reguIndex * studentLimit, (reguIndex + 1) * studentLimit);
+            } else {
+                displayStudents = genderStudents.filter(s => s.classId === selectedClass);
+            }
+            const uniqueClasses = [...new Set(displayStudents.map(s => s.classId))];
+            const isMixed = isUtama && uniqueClasses.length > 1;
+
+            const maqroDisplay = (!isMixed && displayStudents.length > 0) ? (MEMORIZATION_LIMITS[displayStudents[0].type]?.[semester]?.nadhom || '-') : 'Campuran (Lihat Petunjuk Atas)';
+
+            useEffect(() => {
+                if (activePopupIdx !== null && displayStudents[activePopupIdx] && !isTaftisy) {
+                    setPopupScore(examData[phaseKey].scores[displayStudents[activePopupIdx].id]?.score || "");
+                }
+            }, [activePopupIdx]);
+
+            const handleSetScoresData = (studentId, score, bayan) => {
+                setExamData(prev => ({ ...prev, [phaseKey]: {...prev[phaseKey], scores: { ...prev[phaseKey].scores, [studentId]: { score, bayan } } } }));
+            };
+
+            const handleSetChecksData = (studentId, subject, value) => {
+                setExamData(prev => ({ ...prev, [phaseKey]: { ...prev[phaseKey], checks: { ...prev[phaseKey].checks, [studentId]: {...prev[phaseKey].checks[studentId], [subject]: value } } } }));
+            };
+
+            const handleSaveData = async () => {
+                setIsSaving(true);
+                try {
+                    if (isTaftisy) {
+                        const payload = displayStudents.map(s => ({ id: s.id, name: s.name, classId: s.classId, phase: phaseKey, checks: examData[phaseKey].checks[s.id] || {} }));
+                        await apiPost('saveBulkTaftisy', payload);
+                    } else {
+                        const payload = displayStudents.map(s => ({ id: s.id, name: s.name, classId: s.classId, phase: phaseKey, score: examData[phaseKey].scores[s.id]?.score || "", bayan: examData[phaseKey].scores[s.id]?.bayan || "" }));
+                        await apiPost('saveBulkMuhafadzoh', payload);
+                    }
+                    Swal.fire({ title: 'Tersimpan!', icon: 'success', background: '#1e293b', color: '#fff', timer: 1500, showConfirmButton: false });
+                } catch (err) {
+                    Swal.fire({ title: 'Gagal!', text: err.message, icon: 'error', background: '#1e293b', color: '#fff' });
+                } finally { setIsSaving(false); }
+            };
+
+            const handleDownloadPDF = () => {
+                const element = document.getElementById('blangko-cetak');
+                if (!element) return;
+                const opt = {
+                    margin: 0.3, filename: `Blangko_${isTaftisy ? 'Taftisy' : 'Muhafadzoh'}_${isMixed ? regu : selectedClass}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: [8.5, 13], orientation: 'landscape' }
+                };
+                html2pdf().set(opt).from(element).save();
+            };
+
+            const PopupMuhafadzoh = () => {
+                if (activePopupIdx === null || !displayStudents[activePopupIdx]) return null;
+                const student = displayStudents[activePopupIdx];
+                const limits = MEMORIZATION_LIMITS[student.type]?.[semester];
+                const isArabic = limits && (/[\u0600-\u06FF]/.test(limits.r) || limits.nadhom.toLowerCase().includes('tasrif'));
+                
+                const handleChange = (val) => {
+                    setPopupScore(val);
+                    let bayan = isArabic ? examData[phaseKey].scores[student.id]?.bayan : (limits ? calculateAlBayan(val, limits) : null);
+                    handleSetScoresData(student.id, val, bayan);
+                };
+
+                const setManualBayan = (type) => {
+                    handleSetScoresData(student.id, popupScore, examData[phaseKey].scores[student.id]?.bayan === type ? null : type);
+                };
+
+                return (
+                    <div className="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 no-print page-transition" onClick={() => setActivePopupIdx(null)}>
+                        <div className="glass-panel w-full max-w-sm p-6 text-center border-t border-sky-500" onClick={e => e.stopPropagation()}>
+                            <h2 className="text-[16px] font-bold text-white mb-1 uppercase truncate">{student.name}</h2>
+                            <p className="text-xs font-bold text-sky-400 mb-6 bg-sky-900/50 inline-block px-2 py-0.5 rounded-md">Kelas: {student.classId}</p>
+                            
+                            <div className="w-full mb-6">
+                                <label className="block text-center text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">Angka Hafalan</label>
+                                <input type={isArabic ? 'text' : 'number'} value={popupScore} onChange={e => handleChange(e.target.value)} disabled={examData[phaseKey].scores[student.id]?.bayan === 'G'} placeholder="Ketik nilai..." className="w-full text-center text-3xl font-black text-slate-800 dark:text-white bg-slate-100/50 dark:bg-slate-800/50 border-2 border-slate-300 dark:border-white/10 rounded-2xl py-4 outline-none focus:border-sky-400" autoFocus />
+                            </div>
+
+                            <label className="block text-center text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">Bayan (Keterangan)</label>
+                            <div className="grid grid-cols-4 gap-2 mb-6">
+                                {['R', 'M', 'J', 'G'].map(bayan => {
+                                    const isSelected = examData[phaseKey].scores[student.id]?.bayan === bayan;
+                                    const c = {'R':'text-purple-400 bg-purple-900/50 border-purple-500', 'M':'text-sky-400 bg-sky-900/50 border-sky-500', 'J':'text-emerald-400 bg-emerald-900/50 border-emerald-500', 'G':'text-red-400 bg-red-900/50 border-red-500'};
+                                    return (
+                                        <button key={bayan} onPointerDown={handleRipple} onClick={() => setManualBayan(bayan)} className={`ripple-btn py-3 rounded-xl font-bold border transition-all active:scale-95 ${isSelected ? c[bayan] + ' scale-105 shadow-glow' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>{bayan}</button>
+                                    )
+                                })}
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setActivePopupIdx(null)} className="w-1/3 py-3 rounded-xl font-bold text-slate-300 bg-slate-800 border border-slate-700">Tutup</button>
+                                <button onPointerDown={handleRipple} onClick={() => setActivePopupIdx(activePopupIdx < displayStudents.length - 1 ? activePopupIdx + 1 : null)} className="ripple-btn w-2/3 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 shadow-[0_0_15px_rgba(16,185,129,0.5)]">Simpan & Lanjut</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const PopupTaftisy = () => {
+                if (activePopupIdx === null || !displayStudents[activePopupIdx]) return null;
+                const student = displayStudents[activePopupIdx];
+                const curriculum = CURRICULUM[student.type] || [];
+                
+                return (
+                    <div className="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 no-print page-transition" onClick={() => setActivePopupIdx(null)}>
+                        <div className="glass-panel w-full max-w-sm p-6 text-center border-t border-sky-500" onClick={e => e.stopPropagation()}>
+                            <h2 className="text-[16px] font-bold text-white mb-1 uppercase truncate">{student.name}</h2>
+                            <p className="text-xs font-bold text-sky-400 mb-6 bg-sky-900/50 inline-block px-2 py-0.5 rounded-md">Kelas: {student.classId}</p>
+                            
+                            <div className="w-full space-y-3 mb-6">
+                                {curriculum.map((sub, j) => {
+                                    const isChecked = examData[phaseKey].checks[student.id]?.[sub] || false;
+                                    return (
+                                        <div key={j} onClick={() => handleSetChecksData(student.id, sub, !isChecked)} className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${isChecked ? 'bg-emerald-900/30 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-slate-800/50 border-slate-700'}`}>
+                                            <span className={`font-bold text-sm ${isChecked ? 'text-emerald-300' : 'text-slate-300'}`}>{sub}</span>
+                                            <div className={`w-6 h-6 rounded-md flex items-center justify-center border-2 ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-500 bg-slate-700'}`}>{isChecked && <i className="fas fa-check"></i>}</div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <button onPointerDown={handleRipple} onClick={() => curriculum.forEach(sub => handleSetChecksData(student.id, sub, true))} className="ripple-btn w-full bg-emerald-900/40 text-emerald-300 font-bold py-3 rounded-xl mb-4 border border-emerald-400/50 shadow-sm">Tandai Semua Tam</button>
+                            
+                            <div className="flex gap-2">
+                                <button onClick={() => setActivePopupIdx(null)} className="w-1/3 py-3 rounded-xl font-bold text-slate-300 bg-slate-800 border border-slate-700">Tutup</button>
+                                <button onPointerDown={handleRipple} onClick={() => setActivePopupIdx(activePopupIdx < displayStudents.length - 1 ? activePopupIdx + 1 : null)} className="ripple-btn w-2/3 py-3 rounded-xl font-bold text-white bg-gradient-to-r from-sky-500 to-indigo-600 shadow-[0_0_15px_rgba(56,189,248,0.5)]">Simpan & Lanjut</button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const classDisplay = isMixed ? uniqueClasses.join(' & ') : (isUtama ? displayStudents[0]?.classId || "" : selectedClass);
+            const genderStr = displayStudents[0]?.gender === 'Putra' ? 'Pa' : 'Pi';
+            
+            let tTam=0, tNaqis=0, tGhoib=0, tR=0, tM=0, tJ=0;
+            const subjectsAll = useMemo(() => { let subs=[]; [...new Set(displayStudents.map(s => s.type))].forEach(t => { if(CURRICULUM[t]) subs = [...new Set([...subs, ...CURRICULUM[t]])]; }); return subs; }, [displayStudents]);
+
+            return (
+                <div className="h-full flex flex-col pt-2 pb-[100px] overflow-hidden relative w-full page-transition px-4">
+                    <div className="mb-3 flex gap-2 overflow-x-auto hide-scrollbar shrink-0 pb-2 relative z-10">
+                        {tabs.map(t => (
+                            <button key={t} onClick={() => setActiveSubTab(t)} className={`whitespace-nowrap px-5 py-2.5 rounded-2xl text-sm font-black transition-all shadow-sm border backdrop-blur-md ${activeSubTab === t ? 'bg-sky-100 text-sky-700 border-sky-400/50 dark:bg-slate-800/80 dark:text-sky-400 scale-105' : 'bg-white/50 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400 border-slate-300 dark:border-white/10'}`}>{t}</button>
+                        ))}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto hide-scrollbar relative z-0">
+                        <div className="glass-panel p-5 mb-4 grid grid-cols-2 gap-3 relative z-10">
+                            <select value={semester} onChange={e=>setSemester(e.target.value)} className="bg-slate-800/60 border border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none shadow-sm cursor-pointer"><option value="1">Semester 1</option><option value="2">Semester 2</option></select>
+                            <div className="bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-slate-300 shadow-inner flex items-center truncate">{activeSubTab}</div>
+                            <select value={gender} onChange={e=>setGender(e.target.value)} className="bg-slate-800/60 border border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none shadow-sm cursor-pointer"><option>Putra</option><option>Putri</option></select>
+                            {isUtama ? <select value={regu} onChange={e=>setRegu(e.target.value)} className="bg-slate-800/60 border border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none shadow-sm cursor-pointer">{availableRegus.map(r => <option key={r} value={r}>{r}</option>)}</select> : <select value={selectedClass} onChange={e=>setSelectedClass(e.target.value)} className="bg-slate-800/60 border border-slate-600 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none shadow-sm cursor-pointer">{availableClasses.map(c => <option key={c} value={c}>{c}</option>)}</select>}
+                        </div>
+
+                        {/* Kotak Petunjuk Ujian / Batas Hafalan */}
+                        <div className={`no-print bg-slate-800/80 backdrop-blur-xl border-l-[6px] ${isMixed ? 'border-indigo-500' : 'border-amber-400'} rounded-r-2xl p-4 mb-4 shadow-sm transition-all relative z-10 mx-1`}>
+                            <div className={`flex gap-2 items-start mb-2 ${isMixed ? 'text-indigo-400' : 'text-amber-400'}`}>
+                                <div className="mt-0.5"><i className="fas fa-info-circle"></i></div>
+                                <span className="font-extrabold text-sm text-slate-200 leading-tight">
+                                    {isMixed ? "Peringatan: Blangko CAMPURAN. Perhatikan petunjuk dan kolom (KLS)!" : "Batas Hafalan & Petunjuk Ujian:"}
+                                </span>
+                            </div>
+                            <ul className="text-slate-300 list-disc ml-8 space-y-2 text-xs font-medium">
+                                {[...new Set(displayStudents.map(s => s.type))].map(type => {
+                                    const className = type.includes('I') ? `Kls ${type[0]} I'dad` : type.includes('N') ? `Kls ${type[0]} Non-I'dad` : `Kls ${type}`;
+                                    if (isTaftisy) return <li key={type}><strong className="text-sky-300">{className}:</strong> {CURRICULUM[type]?.join(', ')}</li>;
+                                    const limits = MEMORIZATION_LIMITS[type]?.[semester];
+                                    if (!limits) return <li key={type}><strong className="text-sky-300">{className}:</strong> Data belum tersedia</li>;
+                                    const isArabic = /[\u0600-\u06FF]/.test(limits.r) || limits.nadhom.toLowerCase().includes('tasrif');
+                                    return (
+                                        <li key={type}>
+                                            <strong className="text-sky-300">{className} ({limits.nadhom}):</strong><br/>
+                                            <span className={`ml-2 text-[12px] ${isArabic ? 'arabic-text text-sky-400 font-bold' : 'text-slate-400 font-mono font-bold tracking-tight'}`}>
+                                                {isArabic ? `(R) ${limits.r} | (M) ${limits.m} | (J) ${limits.j}` : `Rodli' (${limits.r}), Mutawassith (${limits.m}), Jayyid (${limits.j})`}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        <div className="flex gap-3 mb-5 px-1 relative z-10 no-print">
+                            <button onPointerDown={handleRipple} onClick={handleDownloadPDF} className="ripple-btn flex-1 bg-slate-800/80 border border-rose-400/30 text-rose-300 font-black py-3 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2"><i className="fas fa-print"></i> PDF F4 Cetak</button>
+                            <button onPointerDown={handleRipple} onClick={handleSaveData} disabled={isSaving} className="ripple-btn flex-1 bg-emerald-800/80 border border-emerald-400/30 text-emerald-300 font-black py-3 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2"><i className={`fas ${isSaving ? 'fa-spinner fa-spin' : 'fa-save'}`}></i> Simpan Nilai</button>
+                        </div>
+
+                        <div className="bg-slate-200/90 p-3 rounded-2xl shadow-glass overflow-x-auto border border-white/20 mb-6 transition-all f4-wrapper relative">
+                            <div className="mb-2 text-center text-xs font-bold text-sky-800 bg-sky-100 py-1.5 rounded-md border border-sky-300 no-print">💡 Ketuk baris nama santri di bawah ini untuk mengisi nilai dengan pop-up fokus!</div>
+                            
+                            <div className="f4-paper" id="blangko-cetak">
+                                <div className="flex justify-between items-start mb-4 border-b-[3px] border-black pb-4">
+                                    <div className="flex gap-4">
+                                        {blangkoLogo ? <img src={blangkoLogo} className="w-[75px] h-[95px] object-contain" onError={e=>e.target.style.display='none'} /> : <div className="w-[75px] h-[95px] bg-[#2d5a3f] text-yellow-400 border-[3px] border-yellow-500 text-[10px] font-bold flex flex-col items-center justify-center"><span>LOGO</span></div>}
+                                        <div>
+                                            <h2 className="text-[22px] font-black uppercase leading-tight">{isUtama ? `PANITIA UJIAN ${isTaftisy ? 'TAFTISY' : 'MUHAFADZOH'}` : `PANITIA PRA UJIAN ${isTaftisy ? 'TAFTISY' : 'MUHAFADZOH'}`}<br/>{semester === '2' ? 'GENAP' : 'GANJIL'}</h2>
+                                            <h3 className="text-[17px] font-extrabold leading-snug">Madrasah Diniyyah YAYASAN PONDOK MODERN AL - RIFA'IE 2</h3>
+                                            <p className="text-[11px] font-semibold">Jl. Raya Ketawang No. 02 Kec. Gondanglegi Kab. Malang</p>
+                                        </div>
+                                    </div>
+                                    <div className="border-[3px] border-black text-center w-36 h-[110px] flex flex-col">
+                                        <div className="bg-black text-white p-2 text-[13px] font-bold flex-1 flex items-center justify-center">Blangko {isUtama ? 'Nilai' : 'Pra'} {isTaftisy ? 'Taftisy' : 'Muhafadzoh'}</div>
+                                        <div className="p-2 text-lg font-black uppercase bg-white border-t-[3px] border-black">MADIN</div>
+                                    </div>
+                                </div>
+                                <div className="border-[3px] border-black mb-4 text-[14px] font-extrabold bg-white flex flex-col border-b-[3px] border-black">
+                                    <div className="flex">
+                                        <div className="w-24 border-r-[3px] border-black px-3 py-1">Kelas</div><div className="w-64 border-r-[3px] border-black px-3 py-1">: {classDisplay} ({genderStr})</div>
+                                        {isUtama && <><div className="w-28 border-r-[3px] border-black px-3 py-1">Regu ke</div><div className="w-24 border-r-[3px] border-black px-3 py-1">: {regu.replace('Regu ', "")}</div></>}
+                                        <div className="w-32 border-r-[3px] border-black px-3 py-1">Jumlah Siswa</div><div className="flex-1 px-3 py-1">: {displayStudents.length}</div>
+                                    </div>
+                                    {!isTaftisy && (
+                                        <div className="flex border-t-[3px] border-black">
+                                            <div className="w-24 border-r-[3px] border-black px-3 py-1">Maqro'</div>
+                                            <div className="flex-1 px-3 py-1 border-r-[3px] border-black">: {maqroDisplay}</div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {isTaftisy ? (
+                                    <table className="table-blangko mb-8">
+                                        <thead><tr><th className="w-10">NO</th><th className="w-64">NAMA SANTRI</th>{isUtama&&isMixed&&<th className="w-16 bg-yellow-100">KLS</th>}{subjectsAll.map((s,i)=><th key={i} className="max-w-[90px]">{s}</th>)}<th className="w-28">Ket (Tam/Naqis)</th></tr></thead>
+                                        <tbody>
+                                            {displayStudents.map((s, i) => {
+                                                const curr = CURRICULUM[s.type]||[], chk = examData[phaseKey].checks[s.id]||{};
+                                                let c=0; curr.forEach(sub=>{if(chk[sub])c++});
+                                                const hasInt = Object.keys(chk).length>0, isTam = curr.length>0 && c===curr.length;
+                                                const status = hasInt ? (isTam?'Tam':'Naqis') : '';
+                                                if(hasInt) { if(isTam) tTam++; else tNaqis++; } else tGhoib++;
+                                                return (
+                                                    <tr key={s.id} onClick={()=>setActivePopupIdx(i)} className="h-10 hover:bg-sky-100 cursor-pointer bg-white">
+                                                        <td className="font-bold">{i+1}</td><td className="uppercase font-extrabold text-[12px] text-left px-3 text-sky-900 leading-tight">{s.name}</td>{isUtama&&isMixed&&<td className="font-bold bg-yellow-50">{s.classId}</td>}
+                                                        {subjectsAll.map((sub, j) => (
+                                                            <td key={j} className={`p-0 ${!curr.includes(sub)?'bg-gray-300':''}`}>{curr.includes(sub) ? <div className="w-full h-full flex justify-center items-center"><div className={`w-5 h-5 border-2 border-black rounded ${chk[sub]?'bg-black text-white':''}`}>{chk[sub]&&'✔'}</div></div> : ''}</td>
+                                                        ))}
+                                                        <td className={`font-black ${status==='Tam'?'text-emerald-600':'text-red-600'}`}>{status}</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                ) : (
+                                    <table className="table-blangko mb-8">
+                                        <thead>
+                                            <tr><th rowSpan="2" className="w-12">NO.</th><th rowSpan="2" className="w-64">NAMA</th>{isUtama&&isMixed&&<th rowSpan="2" className="w-16 bg-yellow-100">KLS</th>}<th colSpan="2" className="w-32">TTD</th><th rowSpan="2" className="w-56">HAFALAN</th><th colSpan="4" className="border-b-[3px] border-black">ALBAYAN</th></tr>
+                                            <tr><th className="w-16 text-[10px]">Ganjil</th><th className="w-16 text-[10px]">Genap</th><th className="w-10">R</th><th className="w-10">M</th><th className="w-10">J</th><th className="w-10 text-red-600 bg-red-50">G</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {displayStudents.map((s, i) => {
+                                                const v = examData[phaseKey].scores[s.id]?.score||"", b = examData[phaseKey].scores[s.id]?.bayan||null;
+                                                if (b==='R') tR++; else if (b==='M') tM++; else if (b==='J') tJ++; else tGhoib++;
+                                                return (
+                                                    <tr key={s.id} onClick={()=>setActivePopupIdx(i)} className="h-10 hover:bg-sky-100 cursor-pointer bg-white">
+                                                        <td className="font-bold">{i+1}</td><td className="uppercase font-extrabold text-[12px] text-left px-3 text-sky-900 leading-tight">{s.name}</td>{isUtama&&isMixed&&<td className="font-bold bg-yellow-50">{s.classId}</td>}
+                                                        <td className="text-left align-top p-1 relative">{i%2===0&&<span className="text-[10px] text-gray-500">{i+1}</span>}</td><td className="text-left align-top p-1 relative">{i%2!==0&&<span className="text-[10px] text-gray-500">{i+1}</span>}</td>
+                                                        <td className={`p-0 ${b==='G'?'opacity-30':''}`}><div className="w-full h-full flex items-center justify-center font-bold text-lg">{b==='G'?'':v}</div></td>
+                                                        <td className={`font-black text-xl ${b==='R'?'bg-gray-300':''}`}>{b==='R'?'✔':''}</td><td className={`font-black text-xl ${b==='M'?'bg-gray-300':''}`}>{b==='M'?'✔':''}</td><td className={`font-black text-xl ${b==='J'?'bg-gray-300':''}`}>{b==='J'?'✔':''}</td><td className={`font-black text-xl text-red-600 ${b==='G'?'bg-red-300':'bg-red-50'}`}>{b==='G'?'✔':''}</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                )}
+                                <div className="flex gap-8">
+                                    <table className="table-footer w-[350px]">
+                                        <tbody>
+                                            <tr><td colSpan="3" className="bg-black text-white py-2 text-center font-black border-[3px] border-black">HASIL UJIAN</td></tr>
+                                            {isTaftisy ? (
+                                                <><tr><td className="w-32 font-bold">Tam</td><td>:</td><td className="text-right">{tTam}</td></tr><tr><td className="font-bold">Naqis</td><td>:</td><td className="text-right">{tNaqis}</td></tr><tr><td className="font-bold">Ghoib</td><td>:</td><td className="text-right">{tGhoib}</td></tr></>
+                                            ) : (
+                                                <><tr><td className="w-32 font-bold">Rodi'</td><td>:</td><td className="text-right">{tR} Siswa</td></tr><tr><td className="font-bold">Mutawasith</td><td>:</td><td className="text-right">{tM} Siswa</td></tr><tr><td className="font-bold">Jayyid</td><td>:</td><td className="text-right">{tJ} Siswa</td></tr><tr><td className="font-bold border-[3px] border-black">Jumlah Total</td><td className="border-y-[3px] border-black">:</td><td className="text-right font-black border-[3px] border-black">{displayStudents.length - tGhoib} Siswa</td></tr></>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                    <div className="flex-1 flex flex-col justify-end items-end text-sm"><p className="mb-24 font-bold">{isTaftisy ? 'Korektor,' : 'Penyimak,'}</p><p className="border-b-2 border-black w-64 mb-1"></p></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {isTaftisy ? <PopupTaftisy /> : <PopupMuhafadzoh />}
+                </div>
+            );
+        };
+
+        const DataSantri = ({ students, examData }) => {
+            const [filterClass, setFilterClass] = useState('Semua');
+            const [examPhase, setExamPhase] = useState('utama');
+            const [gender, setGender] = useState('Semua (Pa/Pi)');
+            const classes = ['Semua', ...new Set(students.map(s => s.classId))];
+            
+            const displayData = useMemo(() => {
+                let filtered = students;
+                if (gender === 'Putra') filtered = filtered.filter(s => s.gender === 'Putra');
+                else if (gender === 'Putri') filtered = filtered.filter(s => s.gender === 'Putri');
+                if (filterClass !== 'Semua') filtered = filtered.filter(s => s.classId === filterClass);
+                
+                return filtered.map(s => {
+                    const curriculum = CURRICULUM[s.type] || [];
+                    const checks = examData[examPhase]?.checks[s.id] || {};
+                    let missing = [];
+                    curriculum.forEach(sub => { if(!checks[sub]) missing.push(sub); });
+                    const isTaftisyTam = curriculum.length > 0 && missing.length === 0;
+                    const hasTaftisyInteraction = Object.keys(checks).length > 0;
+                    const hafalan = examData[examPhase]?.scores[s.id]?.score || '-';
+                    const rawBayan = examData[examPhase]?.scores[s.id]?.bayan || '-';
+                    const bayan = rawBayan === 'G' ? 'Ghoib' : rawBayan;
+                    let predikat = '-';
+                    if (hasTaftisyInteraction) predikat = isTaftisyTam ? 'Tam' : 'Naqish';
+                    return {...s, hafalan, bayan, predikat, missing: missing.join(', ') };
+                });
+            }, [filterClass, examPhase, gender, examData, students]);
+
+            return (
+                <div className="p-4 space-y-4 pb-[120px] h-full flex flex-col w-full page-transition">
+                    <div className="glass-panel p-5 shrink-0 flex flex-col gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 flex items-center justify-center text-white shadow-[0_0_15px_rgba(56,189,248,0.5)]"><i className="fas fa-table"></i></div>
+                            <h2 className="text-lg font-extrabold text-white">Data Perolehan</h2>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            <select value={examPhase} onChange={e=>setExamPhase(e.target.value)} className="bg-slate-800/70 border border-slate-600 rounded-xl px-2 py-2 text-xs font-bold text-sky-100 outline-none shadow-sm text-center cursor-pointer hover:bg-slate-700/80 transition-all"><option value="pra">Fase: PRA</option><option value="utama">Fase: UTAMA</option></select>
+                            <select value={gender} onChange={e=>setGender(e.target.value)} className="bg-slate-800/70 border border-slate-600 rounded-xl px-2 py-2 text-xs font-bold text-sky-100 outline-none shadow-sm text-center cursor-pointer hover:bg-slate-700/80 transition-all"><option value="Semua (Pa/Pi)">Semua (Pa/Pi)</option><option value="Putra">Putra</option><option value="Putri">Putri</option></select>
+                            <select value={filterClass} onChange={e=>setFilterClass(e.target.value)} className="bg-slate-800/70 border border-slate-600 rounded-xl px-2 py-2 text-xs font-bold text-sky-100 outline-none shadow-sm text-center cursor-pointer hover:bg-slate-700/80 transition-all">{classes.map(c => <option key={c} value={c}>{c}</option>)}</select>
+                        </div>
+                    </div>
+
+                    <div className="glass-panel flex-1 p-2 flex flex-col min-h-0 relative">
+                        <div className="absolute top-0 right-0 p-2 z-30 pointer-events-none">
+                            <span className="text-[10px] text-sky-300 font-bold bg-slate-900/60 backdrop-blur-md px-2 py-0.5 rounded-full border border-sky-500/30 animate-pulse shadow-sm">Geser <i className="fas fa-arrows-alt-h"></i></span>
+                        </div>
+                        
+                        <div className="overflow-x-auto overflow-y-auto flex-1 rounded-xl hide-scrollbar block w-full relative">
+                            <table className="w-full text-left text-xs whitespace-nowrap min-w-[550px]">
+                                <thead className="sticky top-0 z-20">
+                                    <tr>
+                                        <th className="table-sticky-left bg-slate-800/95 p-3 font-extrabold text-sky-200 uppercase border-b border-white/10 shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Nama Santri</th>
+                                        <th className="bg-slate-800/95 p-3 font-extrabold text-sky-200 uppercase text-center border-l border-b border-white/10">Hafalan</th>
+                                        <th className="bg-slate-800/95 p-3 font-extrabold text-sky-200 uppercase text-center border-b border-white/10">Bayan</th>
+                                        <th className="bg-slate-800/95 p-3 font-extrabold text-sky-200 uppercase text-center border-l border-b border-white/10">Taftisy</th>
+                                        <th className="bg-slate-800/95 p-3 font-extrabold text-sky-200 uppercase border-b border-white/10">Ket. Naqish</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {displayData.map((s) => (
+                                        <tr key={s.id} className="border-b border-white/5 hover:bg-slate-700/50 transition-colors bg-slate-900/40">
+                                            <td className="table-sticky-left bg-slate-900/95 p-3 font-bold text-white max-w-[200px] truncate shadow-[2px_0_5px_rgba(0,0,0,0.1)]">
+                                                {s.name}<br/><span className="text-[9px] text-indigo-300 bg-indigo-900/50 px-1.5 rounded mt-0.5 inline-block border border-indigo-500/30">{s.classId}</span>
+                                            </td>
+                                            <td className="p-3 font-mono font-bold text-center border-l border-white/5 text-slate-200 min-w-[70px]">{s.hafalan}</td>
+                                            <td className={`p-3 font-black text-center text-slate-200 min-w-[70px] ${s.bayan === 'Ghoib' ? 'text-rose-400' : ''}`}>{s.bayan}</td>
+                                            <td className="p-3 font-black text-center border-l border-white/5 min-w-[80px]">{s.predikat === 'Tam' ? <span className="text-emerald-300 bg-emerald-900/50 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(16,185,129,0.2)]">Tam</span> : s.predikat === 'Naqish' ? <span className="text-rose-300 bg-rose-900/50 px-2 py-0.5 rounded shadow-[0_0_10px_rgba(244,63,94,0.2)]">Naqish</span> : '-'}</td>
+                                            <td className="p-3 font-semibold text-slate-400 max-w-[150px] text-[10px] truncate">{s.predikat === 'Naqish' ? s.missing : "-"}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const FeedCard = ({ post, user, fetchData }) => {
+            const [liked, setLiked] = useState(post.likes?.includes(user.name));
+            const [likeCount, setLikeCount] = useState(post.likes?.length || 0);
+            const [showComment, setShowComment] = useState(false);
+            const [commentText, setCommentText] = useState("");
+            const [comments, setComments] = useState(post.comments || []);
+
+            const handleLike = async () => {
+                const wasLiked = liked;
+                setLiked(!wasLiked);
+                setLikeCount(prev => wasLiked ? prev - 1 : prev + 1);
+                try {
+                    await apiPost('toggleLikePost', { postId: post.id, userName: user.name });
+                } catch (err) {
+                    setLiked(wasLiked);
+                    setLikeCount(prev => wasLiked ? prev + 1 : prev - 1);
+                    Swal.fire({title: 'Error', text: 'Gagal menyukai postingan', icon: 'error', background: '#1e293b', color: '#fff'});
+                }
+            };
+
+            const handleComment = async (e) => {
+                e.preventDefault();
+                if(!commentText.trim()) return;
+                const newComment = { author: user.name, text: commentText };
+                const updatedComments = [...comments, newComment];
+                setComments(updatedComments);
+                setCommentText("");
+                try {
+                    await apiPost('addCommentPost', { postId: post.id, commentObj: newComment });
+                } catch (err) {
+                    setComments(comments);
+                    Swal.fire({title: 'Error', text: 'Gagal mengirim komentar', icon: 'error', background: '#1e293b', color: '#fff'});
+                }
+            };
+
+            const handleShare = () => {
+                const textToShare = `${post.text}\n\nOleh: ${post.authorRole}\n${post.imageUrl ? 'Lampiran: ' + post.imageUrl : ''}`;
+                navigator.clipboard.writeText(textToShare);
+                Swal.fire({title: 'Disalin!', text: 'Postingan siap ditempel ke WA.', icon: 'success', background: '#1e293b', color: '#fff', timer: 1500, showConfirmButton: false});
+            };
+
+            return (
+                <div className="glass-panel p-4 mb-4 relative overflow-hidden bg-slate-800/60">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-black text-lg border border-white/20 shadow-[0_0_10px_rgba(168,85,247,0.4)]">
+                            {post.authorName ? post.authorName[0] : 'U'}
+                        </div>
+                        <div>
+                            <h3 className="font-extrabold text-sm text-white leading-tight">{post.authorName || post.authorRole}</h3>
+                            <p className="text-[10px] text-sky-300 font-bold bg-sky-900/50 px-1.5 py-0.5 rounded inline-block mt-0.5 border border-sky-400/20">{post.authorRole}</p>
+                        </div>
+                        <span className="ml-auto text-[10px] font-semibold text-slate-400">{post.time}</span>
+                    </div>
+                    {post.imageUrl && (
+                        <div className="w-full aspect-[4/3] rounded-xl overflow-hidden mb-3 border border-white/10 shadow-inner bg-slate-900/50">
+                            <img src={post.imageUrl} className="w-full h-full object-cover" />
+                        </div>
+                    )}
+                    <p className="text-sm font-medium text-slate-200 mb-3 whitespace-pre-line">{post.text}</p>
+                    
+                    <div className="flex items-center gap-4 border-t border-slate-600/50 pt-3 text-slate-400">
+                        <button onClick={handleLike} className={`flex items-center gap-1.5 text-xs font-bold transition-all ${liked ? 'text-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.6)]' : 'hover:text-slate-200'}`}>
+                            <i className={`${liked ? 'fas' : 'far'} fa-heart text-base`}></i> {likeCount > 0 && likeCount}
+                        </button>
+                        <button onClick={() => setShowComment(!showComment)} className="flex items-center gap-1.5 text-xs font-bold hover:text-slate-200 transition-all">
+                            <i className="far fa-comment text-base"></i> {comments.length > 0 && comments.length}
+                        </button>
+                        <button onClick={handleShare} className="flex items-center gap-1.5 text-xs font-bold hover:text-slate-200 transition-all ml-auto">
+                            <i className="far fa-paper-plane text-base"></i>
+                        </button>
+                    </div>
+
+                    {showComment && (
+                        <div className="mt-3 bg-slate-900/50 rounded-xl p-3 border border-white/10 shadow-inner">
+                            {comments.map((c, i) => (
+                                <div key={i} className="mb-2 text-xs">
+                                    <span className="font-extrabold text-white mr-1">{c.author}</span>
+                                    <span className="text-slate-300">{c.text}</span>
+                                </div>
+                            ))}
+                            <form onSubmit={handleComment} className="flex gap-2 mt-2">
+                                <input type="text" value={commentText} onChange={e => setCommentText(e.target.value)} placeholder="Tambahkan komentar..." className="flex-1 bg-slate-800/80 border border-white/10 rounded-full px-3 py-1.5 text-xs text-white outline-none focus:ring-1 focus:ring-sky-400" />
+                                <button type="submit" className="text-sky-400 font-bold text-xs px-2 active:scale-95">Kirim</button>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            )
+        }
+
+        const Berita = ({ user, feedPosts, fetchData }) => {
+            const [announcementText, setAnnouncementText] = useState("");
+            const [imageFile, setImageFile] = useState(null);
+            const [imagePreview, setImagePreview] = useState(null);
+            const [isUploading, setIsUploading] = useState(false);
+
+            const handleImageSelect = (e) => {
+                if (e.target.files[0]) {
+                    const file = e.target.files[0];
+                    setImagePreview(URL.createObjectURL(file));
+                    setImageFile(file);
+                }
+            };
+
+            const handlePost = async () => {
+                if (!announcementText.trim() && !imageFile) {
+                    Swal.fire({title: 'Oops!', text: 'Postingan tidak boleh kosong!', icon: 'error', background: '#1e293b', color: '#fff'});
+                    return;
+                }
+                setIsUploading(true);
+                let imageUrl = null;
+                try {
+                    if (imageFile) {
+                        const base64 = await getBase64(imageFile);
+                        const filename = `Foto_Berita_${new Date().getTime()}.${imageFile.name.split('.').pop()}`;
+                        imageUrl = await apiPost('uploadImageToDrive', { base64, filename });
+                    }
+                    const newPost = {
+                        id: 'post_' + new Date().getTime(),
+                        authorName: user.name,
+                        authorRole: user.role,
+                        time: 'Baru saja',
+                        text: announcementText,
+                        imageUrl: imageUrl && !imageUrl.includes("Error") ? imageUrl : null,
+                        likes: [],
+                        comments: []
+                    };
+                    await apiPost('saveFeedPost', newPost);
+                    Swal.fire({title: 'Sukses!', text: 'Berhasil memposting ke Feed!', icon: 'success', background: '#1e293b', color: '#fff', timer: 1500});
+                    setAnnouncementText("");
+                    setImagePreview(null);
+                    setImageFile(null);
+                    fetchData(true); 
+                } catch(err) {
+                    Swal.fire({title: 'Error', text: err.message, icon: 'error', background: '#1e293b', color: '#fff'});
+                } finally {
+                    setIsUploading(false);
+                }
+            };
+
+            return (
+                <div className="p-4 pb-[100px] h-full overflow-y-auto w-full page-transition">
+                    <div className="glass-panel p-4 flex flex-col items-center relative overflow-hidden mb-6 border border-sky-400/30">
+                        {isUploading && (
+                            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center rounded-xl transition-all">
+                                <div className="animate-spin w-10 h-10 border-4 border-sky-400 border-t-transparent rounded-full mb-3 shadow-[0_0_15px_rgba(56,189,248,0.5)]"></div>
+                                <p className="font-bold text-sky-300 text-sm animate-pulse drop-shadow-md">Memproses Postingan...</p>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-3 w-full mb-3">
+                            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white font-black text-lg shadow-[0_0_10px_rgba(168,85,247,0.4)] border border-white/20">{user.name ? user.name[0] : 'U'}</div>
+                            <p className="font-extrabold text-sm text-white">Buat Laporan Baru</p>
+                        </div>
+                        <div className="w-full space-y-3 mb-3">
+                            <textarea value={announcementText} onChange={(e) => setAnnouncementText(e.target.value)} placeholder="Tuliskan berita/pengumuman ujian..." className="w-full bg-slate-800/50 border border-white/10 rounded-2xl p-4 text-sm font-medium text-white outline-none focus:ring-2 focus:ring-sky-500 resize-none h-24 shadow-inner placeholder-slate-400"></textarea>
+                            {imagePreview && (
+                                <div className="relative w-full aspect-[4/3] rounded-xl overflow-hidden border border-white/10 shadow-sm">
+                                    <img src={imagePreview} className="w-full h-full object-cover" />
+                                    <button onClick={() => {setImagePreview(null); setImageFile(null);}} className="absolute top-2 right-2 bg-rose-500 text-white font-bold w-8 h-8 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]">X</button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="w-full flex gap-2">
+                            <label className="flex-1 bg-slate-800/80 border border-sky-400/30 text-sky-300 font-bold py-3 rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.1)] flex items-center justify-center gap-2 text-xs active:scale-95 transition-all cursor-pointer">
+                                <i className="fas fa-image"></i> Lampirkan Foto
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageSelect} disabled={isUploading} />
+                            </label>
+                            <button onPointerDown={handleRipple} onClick={handlePost} disabled={isUploading} className="ripple-btn flex-[2] bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-xl flex items-center justify-center gap-2 font-black shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-95 border border-white/20 transition-all">
+                                POSTING SEKARANG
+                            </button>
+                        </div>
+                    </div>
+
+                    <h2 className="font-extrabold text-white mb-3 ml-2 text-sm uppercase tracking-wider drop-shadow-md">Feed Terbaru</h2>
+                    {feedPosts.length === 0 ? (
+                        <div className="text-center text-slate-400 text-sm font-medium py-8 bg-slate-900/50 rounded-2xl border border-white/10 border-dashed backdrop-blur-sm">Belum ada postingan.</div>
+                    ) : (
+                        feedPosts.map(post => <FeedCard key={post.id} post={post} user={user} fetchData={fetchData} />)
+                    )}
+                </div>
+            );
+        };
+
+        const Settings = ({ user, appLogo, setAppLogo, adminProfile, setAdminProfile, blangkoLogo, setBlangkoLogo, appBackground, setAppBackground, loadingText, setLoadingText, menuAccess, setMenuAccess, isDarkMode, setIsDarkMode }) => {
+            const isAdmin = user?.role === 'Admin';
+            const [localLoadingText, setLocalLoadingText] = useState(loadingText || 'MEMUAT APLIKASI...');
+
+            const handleUpload = async (e, setter, key, msg) => {
+                if(e.target.files[0]) {
+                    const file = e.target.files[0];
+                    const base64 = await getBase64(file);
+                    setter(base64);
+                    Swal.fire({ title: 'Mengunggah...', timer: 2000, showConfirmButton: false, background: '#1e293b', color: '#fff' });
+                    try {
+                        const filename = `Set_${key}_${new Date().getTime()}.${file.name.split('.').pop()}`;
+                        const url = await apiPost('uploadImageToDrive', {base64, filename});
+                        if(url && !url.includes("Error")) {
+                            setter(url); localStorage.setItem(key, url); await apiPost('saveSetting', {key, value: url});
+                            Swal.fire({ title: 'Sukses!', text: msg, icon: 'success', background: '#1e293b', color: '#fff' });
+                        } else throw new Error();
+                    } catch (err) { Swal.fire({ title: 'Error!', text: 'Gagal mengunggah foto!', icon: 'error', background: '#1e293b', color: '#fff' }); }
+                }
+            };
+
+            const resetPassword = async (e) => {
+                e.preventDefault();
+                const role = e.target.role.value, pwd = e.target.pwd.value;
+                Swal.fire({ title: 'Memproses...', timer: 1000, showConfirmButton: false, background: '#1e293b', color: '#fff' });
+                try {
+                    await apiPost('updatePassword', {role, newPassword: pwd});
+                    Swal.fire({ title: 'Sukses!', text: 'Password berhasil direset', icon: 'success', background: '#1e293b', color: '#fff' });
+                    e.target.reset();
+                } catch (err) { Swal.fire({ title: 'Gagal!', text: 'Tidak dapat mereset password', icon: 'error', background: '#1e293b', color: '#fff' }); }
+            };
+
+            const handleSaveLoadingText = async () => {
+                setLoadingText(localLoadingText); localStorage.setItem('loadingText', localLoadingText);
+                try { await apiPost('saveSetting', {key: 'loadingText', value: localLoadingText}); Swal.fire({ title: 'Tersimpan!', icon: 'success', background: '#1e293b', color: '#fff' }); } catch(err){}
+            };
+
+            const toggleMenuAccess = async (role, menuId) => {
+                if(!isAdmin) return;
+                const currentAccess = menuAccess[role] || [];
+                const newAccess = currentAccess.includes(menuId) ? currentAccess.filter(id => id !== menuId) : [...currentAccess, menuId];
+                const updatedMenuAccess = {...menuAccess, [role]: newAccess};
+                setMenuAccess(updatedMenuAccess);
+                try { await apiPost('saveSetting', {key: 'menuAccess', value: JSON.stringify(updatedMenuAccess)}); } catch (err) {}
+            };
+
+            return (
+                <div className="p-4 space-y-5 pb-[100px] h-full overflow-y-auto w-full page-transition">
+                    <div className="glass-panel p-6 border-t border-sky-500/30">
+                        <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-2"><i className="fas fa-cog text-sky-400"></i> Pengaturan Visual</h2>
+                        <div className="space-y-4">
+                            <label className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700/60 transition-all shadow-sm">
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${isDarkMode ? 'bg-slate-700 border-indigo-400/30 text-indigo-400' : 'bg-amber-100 border-amber-400/30 text-amber-500'}`}>{isDarkMode ? <i className="fas fa-moon text-lg"></i> : <i className="fas fa-sun text-lg"></i>}</div>
+                                <div className="flex-1"><h3 className="font-bold text-sm text-slate-200">Tema Tampilan</h3><p className="text-[11px] text-slate-400 font-medium">{isDarkMode ? 'Mode Gelap (Neon)' : 'Mode Terang (Kaca)'}</p></div>
+                                <div className={`relative inline-block w-12 h-6 rounded-full transition-colors ${isDarkMode ? 'bg-indigo-500' : 'bg-slate-300'}`}><div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : ''}`}></div></div>
+                                <input type="checkbox" className="hidden" checked={isDarkMode} onChange={() => setIsDarkMode(!isDarkMode)} />
+                            </label>
+                            
+                            {isAdmin && (
+                            <label className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700/60 transition-all shadow-sm">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden border border-sky-400/30 bg-slate-700 p-1">{appLogo ? <img src={appLogo} className="w-full h-full object-cover rounded-lg"/> : <i className="fas fa-image text-sky-400"></i>}</div>
+                                <div className="flex-1"><h3 className="font-bold text-sm text-slate-200">Logo Aplikasi</h3><p className="text-[11px] text-slate-400 font-medium">Ubah logo halaman depan</p></div>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, setAppLogo, 'appLogo', 'Logo Aplikasi diperbarui!')} />
+                            </label>
+                            )}
+
+                            {isAdmin && (
+                            <label className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700/60 transition-all shadow-sm">
+                                <div className="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center overflow-hidden border border-emerald-400/30 p-1">{blangkoLogo ? <img src={blangkoLogo} className="w-full h-full object-contain" /> : <div className="text-[8px] font-bold text-emerald-400 text-center">LOGO MADIN</div>}</div>
+                                <div className="flex-1"><h3 className="font-bold text-sm text-slate-200">Logo Blangko</h3><p className="text-[11px] text-slate-400 font-medium">Ubah logo di kertas ujian</p></div>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, setBlangkoLogo, 'blangkoLogo', 'Logo Blangko diperbarui!')} />
+                            </label>
+                            )}
+
+                            <label className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700/60 transition-all shadow-sm">
+                                <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-indigo-400/30">{adminProfile ? <img src={adminProfile} className="w-full h-full object-cover" /> : <i className="fas fa-user text-indigo-400"></i>}</div>
+                                <div className="flex-1"><h3 className="font-bold text-sm text-slate-200">Foto Profil User</h3><p className="text-[11px] text-slate-400 font-medium">Ubah foto profil yang aktif</p></div>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, setAdminProfile, 'adminProfile', 'Foto Profil diperbarui!')} />
+                            </label>
+
+                            <label className="flex items-center gap-4 bg-slate-800/50 p-4 rounded-2xl border border-white/10 cursor-pointer hover:bg-slate-700/60 transition-all shadow-sm">
+                                <div className="w-12 h-12 rounded-xl bg-slate-700 flex items-center justify-center overflow-hidden border border-pink-400/30">{appBackground ? <img src={appBackground} className="w-full h-full object-cover" /> : <div className="text-[10px] font-bold text-pink-400">BG</div>}</div>
+                                <div className="flex-1"><h3 className="font-bold text-sm text-slate-200">Background Aplikasi</h3><p className="text-[11px] text-slate-400 font-medium">Ubah gambar latar belakang</p></div>
+                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUpload(e, setAppBackground, 'appBackground', 'Background diperbarui!')} />
+                            </label>
+
+                            {isAdmin && (
+                            <div className="bg-slate-800/50 p-4 rounded-2xl border border-white/10 shadow-sm">
+                                <h3 className="font-bold text-sm text-slate-200 mb-2">Teks Loading Aplikasi</h3>
+                                <div className="flex gap-2">
+                                    <input type="text" value={localLoadingText} onChange={(e) => setLocalLoadingText(e.target.value)} className="flex-1 bg-slate-900/50 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-sky-500" />
+                                    <button onPointerDown={handleRipple} onClick={handleSaveLoadingText} className="ripple-btn bg-sky-600 text-white font-bold px-4 py-2 rounded-xl active:scale-95 transition-all shadow-[0_0_15px_rgba(56,189,248,0.4)]">Simpan</button>
+                                </div>
+                            </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {isAdmin && (
+                        <div className="glass-panel p-6 border-t border-purple-500/30">
+                            <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-2"><i className="fas fa-shield-alt text-purple-400"></i> Kelola Akses Menu (Role)</h2>
+                            <div className="space-y-4">
+                                {ROLES.map(r => (
+                                    <div key={r} className="bg-slate-800/50 p-3 rounded-xl border border-white/10 shadow-sm">
+                                        <h3 className="font-black text-sm text-sky-300 mb-2">{r}</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['dash', 'nilai', 'data', 'feed', 'set'].map(menu => {
+                                                const hasAccess = menuAccess[r]?.includes(menu);
+                                                return (
+                                                    <label key={menu} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all ${hasAccess ? 'bg-indigo-900/40 text-indigo-300 border border-indigo-400/30 shadow-[0_0_10px_rgba(99,102,241,0.2)]' : 'bg-slate-900/50 text-slate-500 border border-transparent'}`}>
+                                                        <input type="checkbox" className="hidden" checked={hasAccess} onChange={() => toggleMenuAccess(r, menu)} />
+                                                        {hasAccess && <i className="fas fa-check"></i>} {menu === 'dash' ? 'Dashboard' : menu === 'set' ? 'Settings' : menu === 'feed' ? 'Berita' : menu}
+                                                    </label>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {isAdmin && (
+                        <div className="glass-panel p-6 border-t border-red-500/30">
+                            <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-2"><i className="fas fa-key text-red-400"></i> Reset Password Pengguna</h2>
+                            <form onSubmit={resetPassword} className="space-y-3">
+                                <select name="role" required className="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-sm font-bold text-white shadow-sm outline-none cursor-pointer">
+                                    <option value="">Pilih Role...</option>
+                                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                </select>
+                                <input type="text" name="pwd" required placeholder="Masukkan Password Baru" className="w-full bg-slate-900/50 border border-white/10 rounded-xl p-3 text-sm font-bold text-white shadow-sm outline-none" />
+                                <button type="submit" onPointerDown={handleRipple} className="ripple-btn w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white font-bold py-3.5 rounded-xl active:scale-95 shadow-[0_0_20px_rgba(244,63,94,0.5)] transition-all">Ubah Password</button>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [activeTab, setActiveTab] = useState('dash');
+            const [isLoadingData, setIsLoadingData] = useState(true);
+
+            // Settings State
+            const [isDarkMode, setIsDarkMode] = useState(() => { const saved = localStorage.getItem('theme'); return saved ? saved === 'dark' : true; });
+            const [appLogo, setAppLogo] = useState(() => localStorage.getItem('appLogo') || null);
+            const [loadingText, setLoadingText] = useState(() => localStorage.getItem('loadingText') || 'MEMUAT APLIKASI...');
+            const [blangkoLogo, setBlangkoLogo] = useState(() => localStorage.getItem('blangkoLogo') || null);
+            const [adminProfile, setAdminProfile] = useState(() => localStorage.getItem('adminProfile') || null);
+            const [appBackground, setAppBackground] = useState(() => localStorage.getItem('appBackground') || null);
+
+            // Data State
+            const [appData, setAppData] = useState(null);
+            const [menuAccess, setMenuAccess] = useState(DEFAULT_MENU_ACCESS);
+            
+            // Pull to refresh
+            const [pullStartY, setPullStartY] = useState(null);
+            const [pullDistance, setPullDistance] = useState(0);
+
+            useEffect(() => {
+                if (isDarkMode) { document.documentElement.classList.add('dark'); localStorage.setItem('theme', 'dark'); } 
+                else { document.documentElement.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
+                if (appBackground) {
+                    const overlay = isDarkMode ? 'linear-gradient(rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85))' : 'linear-gradient(rgba(248, 250, 252, 0.6), rgba(248, 250, 252, 0.8))';
+                    document.body.style.backgroundImage = `${overlay}, url(${appBackground})`; document.body.style.backgroundSize = 'cover'; document.body.style.backgroundPosition = 'center'; document.body.style.backgroundAttachment = 'fixed';
+                } else {
+                    document.body.style.backgroundImage = isDarkMode ? 'linear-gradient(120deg, #0f172a, #1e1b4b, #0f172a)' : 'linear-gradient(120deg, #f8fafc, #e2e8f0, #f8fafc)';
+                }
+            }, [appBackground, isDarkMode]);
+
+            const fetchData = async (isRefresh = false) => {
+                if (isRefresh) setIsLoadingData(true);
+                try {
+                    const res = await fetch(`${API_URL}?action=getData`);
+                    const text = await res.text();
+                    const parsed = JSON.parse(text);
+                    setAppData(parsed);
+                    if(parsed.settings.appLogo) { setAppLogo(parsed.settings.appLogo); localStorage.setItem('appLogo', parsed.settings.appLogo); }
+                    if(parsed.settings.loadingText) { setLoadingText(parsed.settings.loadingText); localStorage.setItem('loadingText', parsed.settings.loadingText); }
+                    if(parsed.settings.blangkoLogo) { setBlangkoLogo(parsed.settings.blangkoLogo); localStorage.setItem('blangkoLogo', parsed.settings.blangkoLogo); }
+                    if(parsed.settings.adminProfile) { setAdminProfile(parsed.settings.adminProfile); localStorage.setItem('adminProfile', parsed.settings.adminProfile); }
+                    if(parsed.settings.appBackground) { setAppBackground(parsed.settings.appBackground); localStorage.setItem('appBackground', parsed.settings.appBackground); }
+                    
+                    if(parsed.settings.menuAccess) { 
+                        try { 
+                            let fetchedAccess = JSON.parse(parsed.settings.menuAccess);
+                            const mapOld = { 'dashboard': 'dash', 'penilaian': 'nilai', 'berita': 'feed', 'settings': 'set', 'data': 'data' };
+                            for(let r in fetchedAccess) {
+                                fetchedAccess[r] = fetchedAccess[r].map(m => mapOld[m] || m);
+                            }
+                            setMenuAccess(fetchedAccess); 
+                        } catch(e) {} 
+                    }
+
+                    if (isRefresh) Swal.fire({ title: 'Sukses', text: 'Data diperbarui!', icon: 'success', background: '#1e293b', color: '#fff', timer: 1000, showConfirmButton: false });
+                } catch (err) {
+                    console.error("Gagal Membaca Data:", err);
+                    Swal.fire({ title: 'Error', text: 'Koneksi Server Gagal', icon: 'error', background: '#1e293b', color: '#fff' });
+                } finally {
+                    setTimeout(() => { setIsLoadingData(false); setPullDistance(0); }, 500);
+                }
+            };
+
+            useEffect(() => { fetchData(); }, []);
+
+            const handleTouchStart = (e) => { if (window.scrollY === 0 || document.getElementById('main-scroll-area')?.scrollTop === 0) setPullStartY(e.touches[0].clientY); };
+            const handleTouchMove = (e) => { if (!pullStartY || isLoadingData) return; const diff = e.touches[0].clientY - pullStartY; if (diff > 0) setPullDistance(Math.min(diff * 0.4, 150)); };
+            const handleTouchEnd = () => { if (!pullStartY || isLoadingData) return; if (pullDistance > 60) fetchData(true); else setPullDistance(0); setPullStartY(null); };
+
+            if (isLoadingData && !user) return <LoadingOverlay message={loadingText} logo={appLogo} />;
+            if (!user) return <LoginScreen onLogin={setUser} appLogo={appLogo} usersData={appData ? appData.users : {}} bgImage={appBackground} />;
+
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 'dash': return <Dashboard students={appData.students} examData={appData.examData} />;
+                    case 'nilai': return <Penilaian students={appData.students} examData={appData.examData} setExamData={(fn) => setAppData(prev => ({...prev, examData: fn(prev.examData)}))} blangkoLogo={blangkoLogo} />;
+                    case 'data': return <DataSantri students={appData.students} examData={appData.examData} />;
+                    case 'feed': return <Berita user={user} feedPosts={appData.feedData || []} fetchData={fetchData} />;
+                    case 'set': return <Settings user={user} appLogo={appLogo} setAppLogo={setAppLogo} blangkoLogo={blangkoLogo} setBlangkoLogo={setBlangkoLogo} adminProfile={adminProfile} setAdminProfile={setAdminProfile} appBackground={appBackground} setAppBackground={setAppBackground} loadingText={loadingText} setLoadingText={setLoadingText} menuAccess={menuAccess} setMenuAccess={setMenuAccess} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />;
+                    default: return <Dashboard students={appData.students} examData={appData.examData} />;
+                }
+            };
+
+            const allNavItems = [
+                { id: 'dash', icon: 'fa-home', label: 'DASH' },
+                { id: 'nilai', icon: 'fa-edit', label: 'NILAI' },
+                { id: 'data', icon: 'fa-table', label: 'DATA' },
+                { id: 'feed', icon: 'fa-bullhorn', label: 'FEED' },
+                { id: 'set', icon: 'fa-cog', label: 'SET' }
+            ];
+
+            let userAllowedMenus = menuAccess[user.role] || DEFAULT_MENU_ACCESS[user.role] || ['dash'];
+            const mapOld = { 'dashboard': 'dash', 'penilaian': 'nilai', 'berita': 'feed', 'settings': 'set', 'data': 'data' };
+            userAllowedMenus = userAllowedMenus.map(m => mapOld[m] || m);
+
+            const navItems = allNavItems.filter(item => userAllowedMenus.includes(item.id));
+
+            return (
+                <div className="h-full flex flex-col relative w-full max-w-md mx-auto z-10 transition-colors">
+                    <div className={`fixed top-0 left-0 right-0 max-w-md mx-auto flex justify-center z-[150] pointer-events-none transition-all duration-300 gooey-filter ${isLoadingData && user ? 'opacity-100' : ''}`} style={{ height: `${Math.max(pullDistance, isLoadingData && user ? 80 : 0)}px`, opacity: pullDistance > 10 || (isLoadingData && user) ? 1 : 0 }}>
+                        <div className="bg-sky-500/90 dark:bg-indigo-500/90 backdrop-blur flex items-end justify-center pb-2 shadow-[0_5px_20px_rgba(56,189,248,0.5)] dark:shadow-[0_0_20px_rgba(99,102,241,0.6)] w-20 border border-sky-300/50 dark:border-indigo-400/30" style={{ height: `${Math.max(pullDistance, isLoadingData && user ? 80 : 0)}px`, borderBottomLeftRadius: '50%', borderBottomRightRadius: '50%', transform: isLoadingData && user ? 'scaleY(1)' : `scaleY(${1 + pullDistance/300})` }}>
+                            <i className={`fas fa-sync-alt text-white text-xl mb-1 ${isLoadingData && user ? 'animate-spin' : ''}`}></i>
+                        </div>
+                    </div>
+
+                    <Header user={user} setUser={setUser} appLogo={appLogo} adminProfile={adminProfile} fetchData={fetchData} isLoadingData={isLoadingData} />
+
+                    <main id="main-scroll-area" className="flex-1 overflow-hidden relative z-0 touch-pan-y" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                        <div key={activeTab} className="animate-glass-blur w-full h-full">
+                            {renderContent()}
+                        </div>
+                    </main>
+
+                    {navItems.length > 0 && (
+                        <nav className="fixed bottom-0 left-0 right-0 z-[999] no-print safe-bottom">
+                            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl max-w-md mx-auto rounded-t-3xl p-2 flex justify-around items-center shadow-[0_-10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-slate-300/50 dark:border-white/10 transition-all">
+                                {navItems.map(item => (
+                                    <button key={item.id} onClick={() => setActiveTab(item.id)} className={`flex flex-col items-center justify-center w-[20%] h-14 rounded-2xl transition-all relative ${activeTab === item.id ? 'text-sky-600 dark:text-sky-400 scale-105' : 'text-slate-500 hover:text-sky-500 dark:text-slate-400 dark:hover:text-white hover:scale-105'}`}>
+                                        {activeTab === item.id && <div className="absolute inset-0 bg-sky-100/80 dark:bg-slate-800/80 shadow-sm dark:shadow-[0_0_15px_rgba(56,189,248,0.2)] border border-sky-300/50 dark:border-sky-400/30 rounded-2xl animate-pop-in"></div>}
+                                        <div className="relative z-10 flex flex-col items-center">
+                                            <i className={`fas ${item.icon} text-lg`}></i>
+                                            <span className="text-[9px] font-extrabold mt-1.5 uppercase tracking-wide">{item.label}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </nav>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
